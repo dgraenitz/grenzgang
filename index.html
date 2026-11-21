@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<meta name="theme-color" content="#1F4D3A">
+<meta name="color-scheme" content="light dark">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>Grenzgang</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/maplibre-gl/4.7.1/maplibre-gl.css">
+<style>
+:root{
+  --paper:#F2F4EE; --card:#FBFCF8; --ink:#14201A; --mute:#55655B; --line:#C9D2C4;
+  --spruce:#1F4D3A; --on-spruce:#fff; --marker:#FF5A1F; --sun:#FFD84D;
+  --ok:#2E8B57; --warn:#F0B000; --bad:#D7261E; --dock-h:260px;
+  --font:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  color-scheme:light dark;
+}
+@media (prefers-color-scheme:dark){
+  :root{--paper:#18211B; --card:#1E2A22; --ink:#E9F0E6; --mute:#9DB0A2; --line:#33443A; --spruce:#8FD0A8; --on-spruce:#0F1A13;}
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;overflow:hidden;background:var(--paper);color:var(--ink);font:16px/1.35 var(--font);overscroll-behavior:none}
+#map{position:fixed;inset:0}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--marker);outline-offset:2px}
+[hidden]{display:none!important}
+
+/* ---------- Oberer Bereich ---------- */
+#hudTop{position:fixed;left:8px;right:8px;top:calc(env(safe-area-inset-top) + 8px);display:flex;flex-direction:column;gap:6px;pointer-events:none}
+#hudTop>*{pointer-events:auto}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:0 1px 0 rgba(0,0,0,.04),0 6px 18px rgba(0,0,0,.18)}
+#top{padding:10px 12px;display:flex;align-items:center;gap:10px}
+#top .txt{flex:1;min-width:0}
+#parcelName{font-weight:700;font-size:1.05rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#parcelMeta{color:var(--mute);font-size:.85rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pill{flex:none;font-weight:700;font-size:.85rem;padding:4px 9px;border-radius:99px;background:var(--line);font-variant-numeric:tabular-nums}
+.pill.ok{background:var(--ok);color:#fff}.pill.warn{background:var(--warn);color:#241a00}.pill.bad{background:var(--bad);color:#fff}
+.chip{flex:none;min-height:40px;padding:0 12px;border-radius:10px;border:1.5px solid var(--spruce);background:transparent;font-weight:600;font-size:.85rem}
+.banner{border-radius:10px;padding:9px 14px;font-weight:800;font-size:1rem;text-align:center;border:1px solid var(--line);background:var(--card);box-shadow:0 4px 12px rgba(0,0,0,.15)}
+.banner.ok{background:var(--ok);color:#fff;border-color:transparent}
+.banner.warn{background:var(--warn);color:#241a00;border-color:transparent}
+.banner.bad{background:var(--bad);color:#fff;border-color:transparent}
+#markbar{display:none;align-items:center;gap:10px;padding:8px 12px;border-radius:10px;background:var(--spruce);color:var(--on-spruce);font-weight:600}
+#markbar span{flex:1}
+#markbar button{min-height:38px;padding:0 14px;border-radius:8px;border:0;background:var(--on-spruce);color:var(--spruce);font-weight:700}
+body.marking #markbar{display:flex}
+
+/* ---------- Unterer Bereich ---------- */
+#hudBottom{position:fixed;left:8px;right:8px;bottom:calc(env(safe-area-inset-bottom) + 8px);display:flex;flex-direction:column;gap:8px}
+#pick{padding:10px 12px;display:flex;align-items:center;gap:10px}
+#pick .txt{flex:1;min-width:0}
+#pickName{font-weight:700}#pickMeta{color:var(--mute);font-size:.85rem}
+#pickClose{flex:none;width:40px;height:40px;border:0;background:transparent;font-size:1.4rem;color:var(--mute)}
+#dock{padding:12px 12px 10px;border-radius:18px}
+.hero{display:grid;grid-template-columns:76px 1fr;gap:4px 14px;align-items:center}
+.dial{grid-row:span 2;width:76px;height:76px;border-radius:50%;border:3px solid var(--marker);display:grid;place-items:center;background:var(--paper)}
+#arrow{width:52px;height:52px;color:var(--marker);transition:transform .25s linear}
+.num{display:flex;align-items:baseline;gap:6px;line-height:.95}
+#dist{font-size:3.6rem;font-weight:800;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.unit{font-size:1.5rem;font-weight:700;color:var(--mute)}
+.cap{font-size:.9rem;color:var(--mute)}
+#distDir{font-weight:700;color:var(--ink)}
+.look{margin:10px 0 8px;padding:8px 0 0;border-top:1px solid var(--line);display:grid;gap:4px}
+.look div{display:flex;justify-content:space-between;gap:10px;font-size:.92rem}
+.look dt{color:var(--mute);display:flex;align-items:center;gap:7px}
+.look dd{margin:0;font-weight:700;font-variant-numeric:tabular-nums;text-align:right}
+.dot{width:11px;height:11px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.35)}
+.dot.sun{background:var(--sun)}.dot.mark{background:var(--marker)}
+.seg{display:grid;grid-template-columns:repeat(3,1fr);border:1.5px solid var(--spruce);border-radius:10px;overflow:hidden}
+.seg button{min-height:44px;border:0;background:transparent;font-weight:700}
+.seg button+button{border-left:1.5px solid var(--spruce)}
+.seg button[aria-pressed=true]{background:var(--spruce);color:var(--on-spruce)}
+.tools{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:8px}
+.tools button{min-height:44px;border-radius:10px;border:1.5px solid var(--line);background:var(--paper);font-weight:600;font-size:.88rem}
+.tools button[aria-pressed=true]{border-color:var(--spruce);background:var(--spruce);color:var(--on-spruce)}
+.maplibregl-ctrl-bottom-left,.maplibregl-ctrl-bottom-right{margin-bottom:calc(var(--dock-h) + 12px)}
+
+/* ---------- Karten-Marker ---------- */
+.me{position:relative;width:22px;height:22px}
+.me .dot{position:absolute;inset:3px;border-radius:50%;background:#2f7dd1;border:3px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.3),0 2px 6px rgba(0,0,0,.4)}
+.me .cone{position:absolute;left:-39px;top:-39px;width:100px;height:100px;border-radius:50%;
+  background:conic-gradient(from -28deg at 50% 50%,rgba(47,125,209,.55) 0deg,rgba(47,125,209,.55) 56deg,transparent 56deg);
+  -webkit-mask:radial-gradient(circle,transparent 0,transparent 10px,#000 12px,#000 49px,transparent 50px);mask:radial-gradient(circle,transparent 0,transparent 10px,#000 12px,#000 49px,transparent 50px)}
+
+/* ---------- Menü ---------- */
+#sheet{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:flex-end;z-index:5}
+#sheet .in{width:100%;max-height:88%;overflow:auto;background:var(--paper);border-radius:20px 20px 0 0;padding:14px 16px calc(env(safe-area-inset-bottom) + 20px)}
+.sh{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.sh h2{margin:0;font-size:1.3rem}
+#btnClose{width:44px;height:44px;border:0;background:transparent;font-size:1.6rem}
+#sheet h3{margin:20px 0 6px;font-size:1rem}
+#sheet p{margin:4px 0 8px;color:var(--mute);font-size:.9rem}
+label{display:block;font-weight:600;font-size:.9rem;margin:10px 0 4px}
+input[type=text],input[type=number],select{width:100%;min-height:44px;padding:0 12px;border-radius:10px;border:1.5px solid var(--line);background:var(--card);color:var(--ink);font:inherit}
+.row{display:flex;align-items:center;gap:10px;min-height:44px}
+.row input{width:22px;height:22px}
+.btn{width:100%;min-height:48px;margin-top:10px;border-radius:12px;border:0;background:var(--spruce);color:var(--on-spruce);font-weight:700;font-size:1rem}
+.btn.ghost{background:transparent;color:var(--ink);border:1.5px solid var(--line)}
+.btn:disabled{opacity:.55}
+#gemList{list-style:none;margin:8px 0 0;padding:0}
+#gemList li{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line);font-size:.92rem}
+#gemList .st{color:var(--mute);font-variant-numeric:tabular-nums}
+.msg{margin-top:8px;font-size:.9rem}.msg.ok{color:var(--ok);font-weight:600}.msg.bad{color:var(--bad);font-weight:600}
+
+/* ---------- Start & Hinweise ---------- */
+#start{position:fixed;inset:0;z-index:6;display:grid;place-items:center;padding:20px;background:var(--spruce)}
+#start .in{max-width:420px;color:var(--on-spruce)}
+#start h1{font-size:2.6rem;margin:0 0 8px;letter-spacing:-.02em}
+#start p{margin:0 0 12px;font-size:1.05rem;opacity:.92}
+#start small{display:block;margin-top:14px;opacity:.8;font-size:.85rem}
+#btnStart{width:100%;min-height:54px;border:0;border-radius:14px;background:var(--marker);color:#1d0a00;font-weight:800;font-size:1.1rem;margin-top:8px}
+#toast{position:fixed;left:50%;transform:translateX(-50%);top:calc(env(safe-area-inset-top) + 130px);max-width:90%;padding:10px 14px;border-radius:10px;background:#14201A;color:#fff;font-size:.92rem;z-index:7;box-shadow:0 6px 18px rgba(0,0,0,.35)}
+@media (min-width:700px){#hudTop,#hudBottom{left:50%;right:auto;width:440px;transform:translateX(-50%)}}
+@media (prefers-reduced-motion:reduce){#arrow{transition:none}}
+</style>
+</head>
+<body>
+<div id="map"></div>
+
+<div id="hudTop">
+  <header id="top" class="card">
+    <div class="txt"><div id="parcelName">Suche Standort …</div><div id="parcelMeta"></div></div>
+    <button id="btnHere" class="chip" hidden>In Bereich aufnehmen</button>
+    <span id="acc" class="pill">±– m</span>
+  </header>
+  <div id="banner" class="banner">Warte auf Standort</div>
+  <div id="markbar"><span>Flurstücke antippen · <b id="markCount">0</b> im Bereich</span><button id="btnDone">Fertig</button></div>
+</div>
+
+<div id="hudBottom">
+  <div id="pick" class="card" hidden>
+    <div class="txt"><div id="pickName"></div><div id="pickMeta"></div></div>
+    <button id="pickBtn" class="chip">In Bereich aufnehmen</button>
+    <button id="pickClose" aria-label="Schließen">×</button>
+  </div>
+  <section id="dock" class="card" aria-live="polite">
+    <div class="hero">
+      <div class="dial"><svg id="arrow" viewBox="0 0 64 64" aria-hidden="true"><path d="M32 4 L50 44 L32 35 L14 44 Z" fill="currentColor"/></svg></div>
+      <div class="num"><span id="dist">–</span><span class="unit">m</span></div>
+      <div class="cap"><div id="distCap">Standort oder Flurstück fehlt</div><div id="distDir"></div></div>
+    </div>
+    <dl class="look">
+      <div><dt>Blickrichtung</dt><dd id="hdg">–</dd></div>
+      <div><dt><i class="dot sun"></i>Flurstücksgrenze voraus</dt><dd id="aheadParcel">—</dd></div>
+      <div id="rowArea" hidden><dt><i class="dot mark"></i>Bereichsgrenze voraus</dt><dd id="aheadArea">—</dd></div>
+    </dl>
+    <div id="views" class="seg" role="group" aria-label="Ansicht">
+      <button data-view="2d" aria-pressed="true">2D</button>
+      <button data-view="3d" aria-pressed="false">3D</button>
+      <button data-view="heli" aria-pressed="false">Heli</button>
+    </div>
+    <div class="tools">
+      <button id="btnBase" aria-pressed="false">Luftbild</button>
+      <button id="btnFollow" aria-pressed="true">Folgen</button>
+      <button id="btnMark" aria-pressed="false">Markieren</button>
+      <button id="btnMenu">Menü</button>
+    </div>
+  </section>
+</div>
+
+<div id="sheet" hidden>
+  <div class="in" role="dialog" aria-label="Menü">
+    <div class="sh"><h2>Menü</h2><button id="btnClose" aria-label="Schließen">×</button></div>
+
+    <h3>Flurstücke</h3>
+    <p>Die Daten kommen aus dem amtlichen Liegenschaftskataster (GeoSN) und werden auf dem Gerät gespeichert.</p>
+    <label for="setGem">Gemarkungen (mit Komma getrennt)</label>
+    <input id="setGem" type="text" autocomplete="off">
+    <ul id="gemList"></ul>
+    <button id="btnLoad" class="btn">Flurstücke laden</button>
+    <div id="dataMsg" class="msg"></div>
+
+    <h3>Dein Bereich</h3>
+    <p id="selCount">Noch nichts markiert</p>
+    <p>Tippe auf „Markieren“ und dann auf die Flurstücke, innerhalb derer du dich bewegen willst. Die orange Linie ist die Außengrenze.</p>
+    <button id="btnClear" class="btn ghost">Bereich leeren</button>
+
+    <h3>Warnung und Richtung</h3>
+    <label for="setWarn">Warnabstand zur Grenze (Meter)</label>
+    <input id="setWarn" type="number" inputmode="numeric" min="1" max="100">
+    <label for="setSrc">Blickrichtung aus</label>
+    <select id="setSrc"><option value="compass">Kompass des Handys</option><option value="gps">Gehrichtung (GPS)</option></select>
+    <label for="setDecl">Missweisung Kompass (Grad, Ost positiv)</label>
+    <input id="setDecl" type="number" inputmode="decimal" step="0.5">
+    <p>In Sachsen liegt sie bei etwa +5°. Prüfe sie einmal mit einer bekannten Richtung, etwa einer geraden Straße.</p>
+    <div class="row"><input id="setRot2d" type="checkbox"><label for="setRot2d" style="margin:0">2D-Karte nach Blickrichtung drehen</label></div>
+
+    <h3>Hinweise</h3>
+    <p>Handy-Ortung ist auf Feld und Wald meist 3 bis 10 Meter genau. Die App ist eine Orientierungshilfe und ersetzt keine amtliche Grenzfeststellung.</p>
+    <p>Quellen: Flurstücke und Luftbild © Landesamt für Geobasisinformation Sachsen (GeoSN), Datenlizenz Deutschland – Namensnennung 2.0. Karte © OpenStreetMap-Mitwirkende. Gelände: Mapzen/AWS.</p>
+  </div>
+</div>
+
+<div id="start">
+  <div class="in">
+    <h1>Grenzgang</h1>
+    <p>Zeigt dir beim Gehen, auf welchem Flurstück du stehst, wie weit die Grenze entfernt ist und in welchem Winkel du darauf zugehst.</p>
+    <button id="btnStart">Standort und Kompass starten</button>
+    <small>Orientierungshilfe, keine amtliche Grenzfeststellung.</small>
+  </div>
+</div>
+<div id="toast" hidden></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/maplibre-gl/4.7.1/maplibre-gl.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.9.2/proj4.js"></script>
+<script src="geo.js"></script>
+<script src="app.js"></script>
+<script>
+  // Attribution und Karten-Bedienelemente über dem Dock halten
+  (function(){var h=document.getElementById('hudBottom');if(!h||!window.ResizeObserver)return;
+    new ResizeObserver(function(){document.documentElement.style.setProperty('--dock-h',h.offsetHeight+'px')}).observe(h);})();
+</script>
+</body>
+</html>
